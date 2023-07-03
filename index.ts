@@ -3,6 +3,9 @@ import bodyParser from "body-parser";
 import JSONAPISerializer from "jsonapi-serializer";
 import STAPIClient from "stapi-client-ts";
 
+const apiBase = "api";
+const app = express();
+
 type ResourceApi = {
   page?: (page: number, size: number) => Promise<any>;
   search?: (
@@ -43,14 +46,12 @@ function handleError(error: any, res: any) {
   }
 }
 
-const apiBase = "api";
-const app = express();
-
 app.use(bodyParser.urlencoded({ extended: true }));
 app.get("/", async (req, res) => {
   return res.send(`STAPI JSONAPI Service Example.`);
 });
 
+// Build routes for each resource in the STAPI client
 Object.keys(STAPIClient).forEach((name: string) => {
   const uri = name
     .split(/\.?(?=[A-Z])/)
@@ -64,14 +65,14 @@ Object.keys(STAPIClient).forEach((name: string) => {
     router.get("/", (req, res) => {
       if (api.page === undefined)
         return res.status(501).send("Not implemented");
+
       let page = req.query.page || 1;
       let size = req.query.size || 10;
 
       if (typeof page !== "number") {
-        try {
-          page = parseInt(page as string);
-        } catch (e) {
-          // return res.status(400).send("Invalid page");
+        page = parseInt(page as string);
+
+        if(isNaN(page) || page < 1) {
           return res.json(
             new JSONAPISerializer.Error({
               code: "400",
@@ -84,10 +85,9 @@ Object.keys(STAPIClient).forEach((name: string) => {
       }
 
       if (typeof size !== "number") {
-        try {
-          size = parseInt(size as string);
-        } catch (e) {
-          // return res.status(400).send("Invalid size");
+        size = parseInt(size as string);
+
+        if(isNaN(size) || size < 1 || size > 100) {
           return res.json(
             new JSONAPISerializer.Error({
               code: "400",
@@ -129,15 +129,15 @@ Object.keys(STAPIClient).forEach((name: string) => {
     router.post("/", (req, res) => {
       if (api.search === undefined)
         return res.status(501).send("Not implemented");
+
       let page = req.query.page || 1;
       let size = req.query.size || 10;
       const sort = req.query.sort?.toString() || "uid";
       const formData = req.body;
 
       if (typeof page !== "number") {
-        try {
-          page = parseInt(page as string);
-        } catch (e) {
+        page = parseInt(page as string);
+        if(isNaN(page) || page < 1) {
           // return res.status(400).send("Invalid page");
           return res.json(
             new JSONAPISerializer.Error({
@@ -151,9 +151,8 @@ Object.keys(STAPIClient).forEach((name: string) => {
       }
 
       if (typeof size !== "number") {
-        try {
-          size = parseInt(size as string);
-        } catch (e) {
+        size = parseInt(size as string);
+        if(isNaN(size) || size < 1 || size > 100) {
           // return res.status(400).send("Invalid size");
           return res.json(
             new JSONAPISerializer.Error({
